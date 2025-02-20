@@ -1,4 +1,4 @@
-const generateToken = require('../config/jwtToken');
+const {generateToken, generateRefreshToken, generateAccessToken} = require('../config/jwtToken');
 const user = require('../models/userModel');
 const asyncHandler = require('express-async-handler');
 
@@ -58,18 +58,25 @@ try{
 
 const loginUser = asyncHandler(async (req, res) => { //asyncHandler will catch the error
 	const { email, password } = req.body;
-	const findUser = await user.findOne({ email: email });
-	if(findUser && (await findUser.matchPassword(password))){
-		res.status(200).json({
-			status: 'success',
-			data: {
-				user: findUser,
-				token: generateToken(findUser._id)
-			}
-		})
-	} else {
-		throw new Error('Invalid email or password');
+	try{
+		const findUser = await user.findOne({ email: email });
+		if(findUser && (await findUser.matchPassword(password))){
+			const refreshToken = generateRefreshToken(findUser._id);
+			await user.findByIdAndUpdate(findUser._id, {refreshToken: refreshToken}, {new: true})
+			res.status(200).json({
+				status: 'success',
+				data: {
+					accessToken: generateAccessToken(findUser._id, findUser.role),
+					refreshToken: refreshToken
+				}
+			})
+		} else {
+			throw new Error('Invalid email or password');
+		}
+	} catch(error){
+		throw new Error("Invalid email or password")
 	}
+	
 });
 
 const deleteUser = asyncHandler(async (req, res) => {
@@ -101,9 +108,9 @@ try {
 });
 
 const updateUserByEmail = asyncHandler(async (req, res)=> {
-const email = req.user
+const {email} = req.user
 try {
-	const findUser = await user.findOneAndUpdate(email, 
+	const findUser = await user.findOneAndUpdate({email:email}, 
 		{
 			firstName : req?.body?.firstName,
 			lastName: req?.body?.lastName,
@@ -126,6 +133,109 @@ try {
 }
 });
 
+const blockUser = asyncHandler(async (req, res)=> {
+	const email = req.params
+	try{
+		const updatedUser = await user.findOneAndUpdate(email, 
+			{
+				isBlocked: true
+			},
+			{
+				new: true
+			}
+		)
+		res.status(200).json({
+			data: updatedUser,
+			message: "updated"
+		})
+	} catch(error){
+		throw new Error(error)
+	}
+});
+
+const unblockUser = asyncHandler(async (req, res)=> {
+	const email = req.params
+	try{
+		const updatedUser = await user.findOneAndUpdate(email, 
+			{
+				isBlocked: false
+			},
+			{
+				new: true
+			}
+		)
+		res.status(200).json({
+			data: updatedUser,
+			message: "updated"
+		})
+	} catch(error){
+		throw new Error(error)
+	}
+});
+
+const updateUser = asyncHandler(async (req,res) => {
+	const {_id} = req.user
+	console.log("_id============>", _id);
+	try{
+		const updatedData = await user.findOneAndUpdate(_id, 
+			{
+				firstName:req?.body?.firstName,
+				lastName:req?.body?.lastName,
+				email:req?.body?.email,
+			}, 
+			{
+				new: true
+			}
+		)
+		res.status(200).json({
+			data: updatedData,
+			message: "updated"
+		})
+	} catch(error){
+		throw new Error(error)
+	}
+});
+
+const getAccessToken = asyncHandler(async (req, res) => {
+	const refreshToken = req?.body?.refreshToken
+	try{
+		const findUser = await user.findOne({refreshToken: refreshToken})
+		if(findUser){
+			res.status(200).json({
+				accessToken: generateAccessToken(findUser._id, findUser.role)
+			})
+		} else {
+			throw new Error("error")
+		}
+	} catch(error) {
+		throw new Error(error)
+	}
+
+});
+
+
+const logoutUser = asyncHandler(async (req,res) => {
+	const {_id} = req.user
+	console.log("_id============>", _id);
+	try{
+		const updatedData = await user.findOneAndUpdate(_id, 
+			{
+				refreshToken: ""
+			}, 
+			{
+				new: true
+			}
+		)
+		res.status(200).json({
+			message: "updated"
+		})
+	} catch(error){
+		throw new Error(error)
+	}
+});
+
+
+
 
 module.exports = {
   createUser,
@@ -134,5 +244,10 @@ module.exports = {
   loginUser,
   deleteUser,
   deleteAllUser,
-  updateUserByEmail
+  updateUserByEmail,
+  blockUser,
+  unblockUser,
+  updateUser,
+  getAccessToken,
+  logoutUser
 }

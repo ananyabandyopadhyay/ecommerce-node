@@ -23,6 +23,29 @@ var userSchema = new mongoose.Schema({
 		type:String,
 		required:false,
 		default:"user"
+	},
+	address:{
+		type:Array,
+		require:false,
+		default:[]
+	},
+	cart:{
+		type:Array,
+		require:false,
+		default:[]
+	},
+	wishlist:{
+		type:Array,
+		require:false,
+		default:[]
+	},
+	isBlocked:{
+		type:Boolean,
+		default:false
+	},
+	refreshToken: {
+		type:String,
+		default:""
 	}
 }, {timeStamps: true});
 
