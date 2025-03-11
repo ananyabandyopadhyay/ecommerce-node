@@ -5,8 +5,6 @@ const userModel = require("../models/userModel");
 const authMiddleware = asyncHandler(async (req, res, next) => {
     if (req?.headers?.authorization) {
         const token = req?.headers?.authorization?.split(' ')[1]
-        console.log("token========>", token);
-
         try {
             if (token) {
                 const decoded = jwt.verify(token, process.env.JWT_SECRET)
@@ -41,4 +39,21 @@ const isAdmin = asyncHandler(async (req, res, next) => {
 
 });
 
-module.exports = { authMiddleware, isAdmin }
+const isOwner = asyncHandler(async (req, res, next) => {
+    console.log("req.user.role===>", req.user.role);
+    
+    try{        
+        if(req.user.role !== "owner"){
+            throw new Error("not an owner")
+        } else {
+            next()
+        }
+        
+    } catch (err){
+        throw new Error("not an owner")
+    }
+
+});
+
+
+module.exports = { authMiddleware, isAdmin, isOwner }
