@@ -16,5 +16,4 @@ router.put('/block-user/:email', authMiddleware, isAdmin, blockUser);
 router.put('/unblock-user/:email',authMiddleware, isAdmin, unblockUser);
 router.put('/logout',authMiddleware, logoutUser);
 
-
 module.exports = router;
